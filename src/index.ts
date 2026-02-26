@@ -11,6 +11,7 @@ import 'dotenv/config';
 import express from 'express';
 import session from 'express-session';
 import cors from 'cors';
+import { randomUUID } from 'node:crypto';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import {
@@ -47,106 +48,122 @@ import { listAdGroups } from './tools/list-ad-groups.js';
 import { getAdCreativeText } from './tools/get-ad-creative-text.js';
 
 /**
- * Initialize MCP server
+ * Create a fresh MCP server instance with all tool handlers registered.
+ * Each session gets its own server to avoid "Server already initialized" errors.
  */
-const server = new Server(
-  {
-    name: 'google-ads-mcp',
-    version: '0.1.0',
-  },
-  {
-    capabilities: {
-      tools: {},
-    },
-  }
-);
+function createMCPServer(): Server {
+  const mcpServer = new Server(
+    { name: 'google-ads-mcp', version: '0.1.0' },
+    { capabilities: { tools: {} } }
+  );
 
-/**
- * Register tools/list handler
- */
-server.setRequestHandler(ListToolsRequestSchema, async () => {
-  return { tools };
-});
+  mcpServer.setRequestHandler(ListToolsRequestSchema, async () => {
+    return { tools };
+  });
 
-/**
- * Register tools/call handler
- */
-server.setRequestHandler(CallToolRequestSchema, async (request) => {
-  const { name, arguments: args } = request.params;
+  mcpServer.setRequestHandler(CallToolRequestSchema, async (request) => {
+    const { name, arguments: args } = request.params;
 
-  try {
-    switch (name) {
-      case 'get-account': {
-        const result = await getAccountInfo(args as any);
-        return { content: [{ type: 'text', text: result }] };
+    try {
+      switch (name) {
+        case 'get-account': {
+          const result = await getAccountInfo(args as any);
+          return { content: [{ type: 'text', text: result }] };
+        }
+        case 'get-campaign-performance': {
+          const result = await getCampaignPerformance(args as any);
+          return { content: [{ type: 'text', text: result }] };
+        }
+        case 'get-adgroup-performance': {
+          const result = await getAdGroupPerformance(args as any);
+          return { content: [{ type: 'text', text: result }] };
+        }
+        case 'get-ad-performance': {
+          const result = await getAdPerformance(args as any);
+          return { content: [{ type: 'text', text: result }] };
+        }
+        case 'get-video-performance': {
+          const result = await getVideoPerformance(args as any);
+          return { content: [{ type: 'text', text: result }] };
+        }
+        case 'get-video-demographics': {
+          const result = await getVideoDemographics(args as any);
+          return { content: [{ type: 'text', text: result }] };
+        }
+        case 'compare-time-periods': {
+          const result = await compareTimePeriods(args as any);
+          return { content: [{ type: 'text', text: result }] };
+        }
+        case 'compare-entities': {
+          const result = await compareEntities(args as any);
+          return { content: [{ type: 'text', text: result }] };
+        }
+        case 'get-youtube-ad-details': {
+          const result = await getYouTubeAdDetails(args as any);
+          return { content: [{ type: 'text', text: result }] };
+        }
+        case 'analyze-video-creative': {
+          const result = await analyzeVideoCreative(args as any);
+          return { content: [{ type: 'text', text: result }] };
+        }
+        case 'analyze-video-url': {
+          const result = await analyzeVideoUrl(args as any);
+          return { content: [{ type: 'text', text: result }] };
+        }
+        case 'get-keyword-performance': {
+          const result = await getKeywordPerformance(args as any);
+          return { content: [{ type: 'text', text: result }] };
+        }
+        case 'list-campaigns': {
+          const result = await listCampaigns(args as any);
+          return { content: [{ type: 'text', text: result }] };
+        }
+        case 'list-ad-groups': {
+          const result = await listAdGroups(args as any);
+          return { content: [{ type: 'text', text: result }] };
+        }
+        case 'get-ad-creative-text': {
+          const result = await getAdCreativeText(args as any);
+          return { content: [{ type: 'text', text: result }] };
+        }
+        default:
+          throw new Error(`Unknown tool: ${name}`);
       }
-      case 'get-campaign-performance': {
-        const result = await getCampaignPerformance(args as any);
-        return { content: [{ type: 'text', text: result }] };
-      }
-      case 'get-adgroup-performance': {
-        const result = await getAdGroupPerformance(args as any);
-        return { content: [{ type: 'text', text: result }] };
-      }
-      case 'get-ad-performance': {
-        const result = await getAdPerformance(args as any);
-        return { content: [{ type: 'text', text: result }] };
-      }
-      case 'get-video-performance': {
-        const result = await getVideoPerformance(args as any);
-        return { content: [{ type: 'text', text: result }] };
-      }
-      case 'get-video-demographics': {
-        const result = await getVideoDemographics(args as any);
-        return { content: [{ type: 'text', text: result }] };
-      }
-      case 'compare-time-periods': {
-        const result = await compareTimePeriods(args as any);
-        return { content: [{ type: 'text', text: result }] };
-      }
-      case 'compare-entities': {
-        const result = await compareEntities(args as any);
-        return { content: [{ type: 'text', text: result }] };
-      }
-      case 'get-youtube-ad-details': {
-        const result = await getYouTubeAdDetails(args as any);
-        return { content: [{ type: 'text', text: result }] };
-      }
-      case 'analyze-video-creative': {
-        const result = await analyzeVideoCreative(args as any);
-        return { content: [{ type: 'text', text: result }] };
-      }
-      case 'analyze-video-url': {
-        const result = await analyzeVideoUrl(args as any);
-        return { content: [{ type: 'text', text: result }] };
-      }
-      case 'get-keyword-performance': {
-        const result = await getKeywordPerformance(args as any);
-        return { content: [{ type: 'text', text: result }] };
-      }
-      case 'list-campaigns': {
-        const result = await listCampaigns(args as any);
-        return { content: [{ type: 'text', text: result }] };
-      }
-      case 'list-ad-groups': {
-        const result = await listAdGroups(args as any);
-        return { content: [{ type: 'text', text: result }] };
-      }
-      case 'get-ad-creative-text': {
-        const result = await getAdCreativeText(args as any);
-        return { content: [{ type: 'text', text: result }] };
-      }
-      default:
-        throw new Error(`Unknown tool: ${name}`);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      return {
+        content: [{ type: 'text', text: `Error: ${errorMessage}` }],
+        isError: true,
+      };
     }
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    return {
-      content: [{ type: 'text', text: `Error: ${errorMessage}` }],
-      isError: true,
-    };
+  });
+
+  return mcpServer;
+}
+
+/**
+ * Per-session transport map.
+ * Each MCP session gets its own Server + StreamableHTTPServerTransport pair
+ * to avoid "Stateless transport cannot be reused" and "Server already initialized" errors.
+ */
+const sessions = new Map<string, {
+  transport: StreamableHTTPServerTransport;
+  server: Server;
+  createdAt: number;
+}>();
+
+// Sweep sessions older than 30 minutes to prevent memory leaks
+const SESSION_MAX_AGE_MS = 30 * 60 * 1000;
+setInterval(() => {
+  for (const [id, entry] of sessions) {
+    if (Date.now() - entry.createdAt > SESSION_MAX_AGE_MS) {
+      console.log(`[MCP] Cleaning up stale session: ${id}`);
+      try { entry.transport.close?.(); } catch {}
+      try { entry.server.close(); } catch {}
+      sessions.delete(id);
+    }
   }
-});
+}, 5 * 60 * 1000);
 
 /**
  * Initialize access token store
@@ -292,18 +309,82 @@ async function main() {
   // Auth routes
   app.use('/auth', authRoutes);
 
-  // MCP transport
-  const transport = new StreamableHTTPServerTransport();
+  // MCP POST endpoint — route by session
+  const mcpBodyParser = express.text({ type: '*/*' });
+  app.post('/mcp', mcpBodyParser, waitForReadiness, requireAuthForToolCall, async (req, res) => {
+    let body: any;
+    try {
+      body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+    } catch {
+      res.status(400).json({ jsonrpc: '2.0', error: { code: -32700, message: 'Parse error' }, id: null });
+      return;
+    }
 
-  // Connect MCP server to transport
-  await server.connect(transport);
+    const method = body?.method || 'unknown';
+    const sessionId = req.headers['mcp-session-id'] as string | undefined;
 
-  // MCP GET endpoint (SSE)
+    console.log('[MCP] POST /mcp request received', {
+      authenticated: !!req.user,
+      userId: req.user?.userId,
+      method,
+      sessionId: sessionId ?? '(none)',
+    });
+
+    try {
+      if (method === 'initialize') {
+        // New session: create fresh server + transport pair
+        const transport = new StreamableHTTPServerTransport({
+          sessionIdGenerator: () => randomUUID(),
+        });
+        const mcpServer = createMCPServer();
+        await mcpServer.connect(transport);
+        await transport.handleRequest(req, res, req.body);
+
+        const newSessionId = transport.sessionId;
+        if (newSessionId) {
+          sessions.set(newSessionId, { transport, server: mcpServer, createdAt: Date.now() });
+          console.log(`[MCP] New session created: ${newSessionId} (total: ${sessions.size})`);
+        }
+      } else if (sessionId && sessions.has(sessionId)) {
+        // Existing session: delegate to its transport
+        const entry = sessions.get(sessionId)!;
+        await entry.transport.handleRequest(req, res, req.body);
+        console.log('[MCP] POST /mcp response sent for method:', method);
+      } else {
+        res.status(404).json({
+          jsonrpc: '2.0',
+          error: { code: -32001, message: 'Session not found. Please reinitialize.' },
+          id: body?.id ?? null,
+        });
+      }
+    } catch (error) {
+      console.error('[MCP] POST /mcp error:', error);
+      if (!res.headersSent) {
+        res.status(500).json({ jsonrpc: '2.0', error: { code: -32603, message: 'Internal error' }, id: body?.id ?? null });
+      }
+    }
+  });
+
+  // MCP GET endpoint (SSE) — look up session by header
   app.get('/mcp', waitForReadiness, requireAuthForToolCall, async (req, res) => {
+    const sessionId = req.headers['mcp-session-id'] as string | undefined;
+
     console.log('[MCP] GET /mcp request received', {
       authenticated: !!req.user,
       userId: req.user?.userId,
+      sessionId: sessionId ?? '(none)',
     });
+
+    if (!sessionId || !sessions.has(sessionId)) {
+      res.status(404).json({
+        jsonrpc: '2.0',
+        error: { code: -32001, message: 'Session not found. Please reinitialize.' },
+        id: null,
+      });
+      return;
+    }
+
+    const entry = sessions.get(sessionId)!;
 
     let connectionId: string | undefined;
     if (req.user) {
@@ -323,30 +404,11 @@ async function main() {
     res.setHeader('X-Accel-Buffering', 'no');
 
     try {
-      await transport.handleRequest(req, res);
+      await entry.transport.handleRequest(req, res);
     } catch (error) {
       console.error('[MCP] GET /mcp error:', error);
       if (!res.headersSent) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        if (errorMessage.includes('session') || errorMessage.includes('Session')) {
-          const baseUrl = `${req.protocol}://${req.get('host')}`;
-          res.status(401).json({
-            jsonrpc: '2.0',
-            error: {
-              code: -32001,
-              message: 'Connection reset after server restart. Please restart Claude Code to reconnect.',
-              data: {
-                authentication: {
-                  type: 'oauth2',
-                  oauth_authorization_server: `${baseUrl}/.well-known/oauth-authorization-server`,
-                },
-              },
-            },
-            id: null,
-          });
-        } else {
-          res.status(500).json({ error: 'Internal server error' });
-        }
+        res.status(500).json({ error: 'Internal server error' });
       }
     } finally {
       if (connectionId) {
@@ -355,49 +417,17 @@ async function main() {
     }
   });
 
-  // MCP POST endpoint (tool calls)
-  const mcpBodyParser = express.text({ type: '*/*' });
-  app.post('/mcp', mcpBodyParser, waitForReadiness, requireAuthForToolCall, async (req, res) => {
-    let method = 'unknown';
-    try {
-      const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
-      method = body?.method || 'unknown';
-    } catch (e) {}
-
-    console.log('[MCP] POST /mcp request received', {
-      authenticated: !!req.user,
-      userId: req.user?.userId,
-      method,
-    });
-
-    try {
-      await transport.handleRequest(req, res, req.body);
-      console.log('[MCP] POST /mcp response sent for method:', method);
-    } catch (error) {
-      console.error('[MCP] POST /mcp error:', error);
-      if (!res.headersSent) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        if (errorMessage.includes('session') || errorMessage.includes('Session')) {
-          const baseUrl = `${req.protocol}://${req.get('host')}`;
-          res.status(200).json({
-            jsonrpc: '2.0',
-            error: {
-              code: -32001,
-              message: 'Connection reset after server restart. Please restart Claude Code to reconnect.',
-              data: {
-                authentication: {
-                  type: 'oauth2',
-                  oauth_authorization_server: `${baseUrl}/.well-known/oauth-authorization-server`,
-                },
-              },
-            },
-            id: null,
-          });
-        } else {
-          res.status(500).json({ error: 'Internal server error' });
-        }
-      }
+  // MCP DELETE endpoint — clean up sessions
+  app.delete('/mcp', (req, res) => {
+    const sessionId = req.headers['mcp-session-id'] as string | undefined;
+    if (sessionId && sessions.has(sessionId)) {
+      const entry = sessions.get(sessionId)!;
+      console.log(`[MCP] Deleting session: ${sessionId}`);
+      try { entry.transport.close?.(); } catch {}
+      try { entry.server.close(); } catch {}
+      sessions.delete(sessionId);
     }
+    res.status(200).end();
   });
 
   // Start HTTP server
@@ -440,6 +470,13 @@ async function main() {
     console.error('[Shutdown] Forcing remaining connections closed');
     mcpConnectionRegistry.closeAll();
     accessTokenStore.destroy();
+
+    // Clean up all MCP sessions
+    for (const [id, entry] of sessions) {
+      try { entry.transport.close?.(); } catch {}
+      try { entry.server.close(); } catch {}
+      sessions.delete(id);
+    }
 
     console.error('[Shutdown] Graceful shutdown complete');
     process.exit(0);
