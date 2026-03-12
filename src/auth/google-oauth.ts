@@ -6,7 +6,7 @@
  * 2. Exchange authorization code for access token
  * 3. Fetch user profile information
  *
- * Scopes: Google Ads (readonly), YouTube (readonly)
+ * Scopes: Google Ads (readonly)
  */
 
 import axios from 'axios';
@@ -16,10 +16,9 @@ const GOOGLE_OAUTH_BASE = 'https://accounts.google.com/o/oauth2/v2/auth';
 const GOOGLE_TOKEN_ENDPOINT = 'https://oauth2.googleapis.com/token';
 const GOOGLE_USERINFO_ENDPOINT = 'https://www.googleapis.com/oauth2/v2/userinfo';
 
-// Scopes required for Google Ads + YouTube readonly access
+// Scopes required for Google Ads readonly access
 const SCOPES = [
   'https://www.googleapis.com/auth/adwords',
-  'https://www.googleapis.com/auth/youtube.readonly',
   'https://www.googleapis.com/auth/userinfo.email',
   'https://www.googleapis.com/auth/userinfo.profile',
 ].join(' ');
