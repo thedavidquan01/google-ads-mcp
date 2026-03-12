@@ -231,7 +231,7 @@ async function main() {
       description: 'Access Google Ads API for campaign analytics, YouTube video metrics, and AI-powered video analysis',
       version: '0.1.0',
       transport: 'http',
-      url: `${env.NODE_ENV === 'production' ? 'https://sp-google-ads-mcp.fly.dev' : 'http://localhost:3000'}/mcp`,
+      url: `${env.NODE_ENV === 'production' ? 'https://recime-google-ads-mcp.fly.dev' : 'http://localhost:3000'}/mcp`,
       authentication: {
         type: 'oauth',
         provider: 'google',
