@@ -138,23 +138,38 @@ npm start
 
 All tools are accessible via Claude Code once authenticated:
 
-| # | Tool | Description |
-|---|------|-------------|
-| 1 | **get-account** | Retrieve Google Ads account information |
-| 2 | **get-campaign-performance** | Campaign-level metrics and performance |
-| 3 | **get-adgroup-performance** | Ad Group-level performance data |
-| 4 | **get-ad-performance** | Individual ad performance metrics |
-| 5 | **get-keyword-performance** | Keyword-level performance and quality scores |
-| 6 | **get-ad-creative-text** | Extract ad creative text (headlines, descriptions) |
-| 7 | **get-video-performance** | YouTube video ad performance metrics |
-| 8 | **get-video-demographics** | Audience demographic breakdowns for video ads |
-| 9 | **get-youtube-ad-details** | Detailed YouTube ad information |
-| 10 | **analyze-video-creative** | AI-powered video creative analysis (Gemini) |
-| 11 | **analyze-video-url** | Analyze a video from URL with Gemini AI |
-| 12 | **compare-entities** | Compare multiple campaigns/ad groups/ads side by side |
-| 13 | **compare-time-periods** | Compare performance across time periods |
-| 14 | **list-campaigns** | List all campaigns with status and type |
-| 15 | **list-ad-groups** | List ad groups within a campaign |
+| # | Tool | Description | When to Use |
+|---|------|-------------|-------------|
+| 1 | **get-account** | Account info (currency, timezone, status) | Verify account access and settings |
+| 2 | **get-campaign-performance** | Campaign-level metrics and performance | Weekly/daily performance pulls. Filter by `campaignType` (SEARCH, PMAX, VIDEO, DEMAND_GEN). Always request `conversion_value` and `roas` alongside defaults. |
+| 3 | **get-adgroup-performance** | Ad Group-level performance data | Drill into which ad groups within a campaign are driving results |
+| 4 | **get-ad-performance** | Individual ad performance (includes video quartile completion) | Find top/bottom performing individual ads |
+| 5 | **get-keyword-performance** | Keyword-level performance, quality scores, impression share | Search campaign optimization — sort by spend, flag high-spend/low-conversion keywords |
+| 6 | **get-ad-creative-text** | Extract headlines, descriptions, and copy from ads | Pull copy from responsive search, display, and video ads |
+| 7 | **get-video-performance** | YouTube video views, CPV, view rate, quartile drop-off (25/50/75/100%) | Video ad retention analysis |
+| 8 | **get-video-demographics** | Audience breakdowns segmented by `age`, `gender`, or `device` | Build audience profile (requires 3 calls for full picture) |
+| 9 | **get-youtube-ad-details** | Video metadata (title, duration, thumbnail, view count) | Get context on a specific YouTube video ad |
+| 10 | **analyze-video-creative** | AI analysis of YouTube video ads (scenes, overlays, tone, transcript) — cached 24h | Understand what's working in top-performing creatives |
+| 11 | **analyze-video-url** | Same AI analysis but for any direct video URL | Analyze videos not hosted on YouTube |
+| 12 | **compare-entities** | Side-by-side campaign or ad group comparison (2-10 entities, sortable) | A/B comparisons and competitive ranking |
+| 13 | **compare-time-periods** | Auto-compares current vs prior period (e.g., last 7d vs prior 7d) | WoW or MoM trend analysis |
+| 14 | **list-campaigns** | List all campaigns — filter by `status` (ENABLED/PAUSED) or `type` | Quick inventory of campaigns |
+| 15 | **list-ad-groups** | List ad groups within a campaign | Explore campaign structure |
+
+### Known Gotchas
+
+- **`video_views` metric errors on campaign-level queries** — omit it from `get-campaign-performance` metrics array. Use `get-video-performance` for video metrics instead.
+- **PMAX conversion value gaps** — PMAX campaigns may report high conversion counts (e.g., app installs) but $0 conversion value. This is a conversion value tracking gap, not a performance issue. Flag this when reporting.
+- **Legacy paused campaigns** — Always filter out paused campaigns with $0 spend when presenting results. Accounts often have many inactive campaigns that clutter output.
+- **Date ranges are presets only** — `last_7d`, `last_14d`, `last_30d`, `last_90d`, `this_month`, `last_month`. No custom date ranges supported.
+
+### Recommended Workflows
+
+1. **Weekly performance report**: `get-campaign-performance` (last_7d, all metrics) → filter to ENABLED campaigns with spend > $0 → present as table with totals
+2. **Trend analysis**: `compare-time-periods` (last_7d) to get WoW deltas automatically
+3. **Creative analysis**: `get-ad-performance` → identify top/bottom ads → `analyze-video-creative` on top performers to understand what's working
+4. **Search optimization**: `get-keyword-performance` → sort by spend → flag high-spend/low-conversion keywords
+5. **Audience insights**: `get-video-demographics` segmented by age, then gender, then device (3 calls) to build full audience picture
 
 ## Environment Variables
 
