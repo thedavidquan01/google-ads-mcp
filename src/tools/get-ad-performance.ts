@@ -17,6 +17,10 @@ const GetAdPerformanceSchema = z.object({
   campaignId: z.string().optional(),
   adGroupId: z.string().optional(),
   limit: z.number().int().positive().default(50),
+  segmentByDay: z
+    .boolean()
+    .default(false)
+    .describe('When true, returns metrics broken down by day instead of aggregated over the date range'),
 });
 
 export async function getAdPerformance(args: unknown): Promise<string> {
@@ -32,32 +36,38 @@ export async function getAdPerformance(args: unknown): Promise<string> {
     if (input.campaignId) where.push(`campaign.id = ${input.campaignId}`);
     if (input.adGroupId) where.push(`ad_group.id = ${input.adGroupId}`);
 
+    const selectFields = [
+      'ad_group_ad.ad.id',
+      'ad_group_ad.ad.type',
+      'ad_group_ad.ad.name',
+      'ad_group_ad.status',
+      'ad_group_ad.ad.final_urls',
+      'campaign.id',
+      'campaign.name',
+      'ad_group.id',
+      'ad_group.name',
+      'metrics.impressions',
+      'metrics.clicks',
+      'metrics.cost_micros',
+      'metrics.conversions',
+      'metrics.conversions_value',
+    ];
+
+    if (input.segmentByDay) {
+      selectFields.push('segments.date');
+    }
+
     const query = buildGaqlQuery({
-      select: [
-        'ad_group_ad.ad.id',
-        'ad_group_ad.ad.type',
-        'ad_group_ad.ad.name',
-        'ad_group_ad.status',
-        'ad_group_ad.ad.final_urls',
-        'campaign.id',
-        'campaign.name',
-        'ad_group.id',
-        'ad_group.name',
-        'metrics.impressions',
-        'metrics.clicks',
-        'metrics.cost_micros',
-        'metrics.conversions',
-        'metrics.conversions_value',
-      ],
+      select: selectFields,
       from: 'ad_group_ad',
       where,
-      orderBy: 'metrics.cost_micros DESC',
+      orderBy: input.segmentByDay ? 'segments.date DESC, metrics.cost_micros DESC' : 'metrics.cost_micros DESC',
       limit: input.limit,
     });
 
     const results = await executeGaql(query);
 
-    const ads = results.map((row: any) => {
+    function buildRow(row: any) {
       const ad = row.ad_group_ad.ad;
       const m = row.metrics;
       const impressions = safeParseNumber(m.impressions);
@@ -89,7 +99,28 @@ export async function getAdPerformance(args: unknown): Promise<string> {
           videoQuartile100: safeParseNumber(m.video_quartile_p100_rate),
         },
       };
-    });
+    }
+
+    if (input.segmentByDay) {
+      const byDate: Record<string, any[]> = {};
+      for (const row of results) {
+        const date = row.segments.date;
+        if (!byDate[date]) byDate[date] = [];
+        byDate[date].push(buildRow(row));
+      }
+
+      const daily = Object.entries(byDate)
+        .sort(([a], [b]) => b.localeCompare(a))
+        .map(([date, ads]) => ({ date, ads }));
+
+      return JSON.stringify({
+        dateRange: input.dateRange,
+        segmentByDay: true,
+        daily,
+      }, null, 2);
+    }
+
+    const ads = results.map(buildRow);
 
     return JSON.stringify({
       dateRange: input.dateRange,
@@ -114,6 +145,7 @@ export const getAdPerformanceTool: Tool = {
       campaignId: { type: 'string' as const, description: 'Filter by campaign ID' },
       adGroupId: { type: 'string' as const, description: 'Filter by ad group ID' },
       limit: { type: 'number' as const, description: 'Maximum number of ads to return', default: 50 },
+      segmentByDay: { type: 'boolean' as const, description: 'When true, returns metrics broken down by day instead of aggregated over the date range', default: false },
     },
   },
 };

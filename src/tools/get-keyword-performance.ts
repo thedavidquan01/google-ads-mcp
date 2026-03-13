@@ -17,6 +17,10 @@ const GetKeywordPerformanceSchema = z.object({
   campaignId: z.string().optional(),
   adGroupId: z.string().optional(),
   limit: z.number().int().positive().default(50),
+  segmentByDay: z
+    .boolean()
+    .default(false)
+    .describe('When true, returns metrics broken down by day instead of aggregated over the date range'),
 });
 
 export async function getKeywordPerformance(args: unknown): Promise<string> {
@@ -33,29 +37,35 @@ export async function getKeywordPerformance(args: unknown): Promise<string> {
     if (input.campaignId) where.push(`campaign.id = ${input.campaignId}`);
     if (input.adGroupId) where.push(`ad_group.id = ${input.adGroupId}`);
 
+    const selectFields = [
+      'ad_group_criterion.keyword.text',
+      'ad_group_criterion.keyword.match_type',
+      'ad_group_criterion.quality_info.quality_score',
+      'campaign.name',
+      'ad_group.name',
+      'metrics.impressions',
+      'metrics.clicks',
+      'metrics.cost_micros',
+      'metrics.conversions',
+      'metrics.conversions_value',
+      'metrics.search_impression_share',
+    ];
+
+    if (input.segmentByDay) {
+      selectFields.push('segments.date');
+    }
+
     const query = buildGaqlQuery({
-      select: [
-        'ad_group_criterion.keyword.text',
-        'ad_group_criterion.keyword.match_type',
-        'ad_group_criterion.quality_info.quality_score',
-        'campaign.name',
-        'ad_group.name',
-        'metrics.impressions',
-        'metrics.clicks',
-        'metrics.cost_micros',
-        'metrics.conversions',
-        'metrics.conversions_value',
-        'metrics.search_impression_share',
-      ],
+      select: selectFields,
       from: 'keyword_view',
       where,
-      orderBy: 'metrics.cost_micros DESC',
+      orderBy: input.segmentByDay ? 'segments.date DESC, metrics.cost_micros DESC' : 'metrics.cost_micros DESC',
       limit: input.limit,
     });
 
     const results = await executeGaql(query);
 
-    const keywords = results.map((row: any) => {
+    function buildRow(row: any) {
       const kw = row.ad_group_criterion?.keyword;
       const qi = row.ad_group_criterion?.quality_info;
       const m = row.metrics;
@@ -80,7 +90,28 @@ export async function getKeywordPerformance(args: unknown): Promise<string> {
           searchImpressionShare: safeParseNumber(m.search_impression_share),
         },
       };
-    });
+    }
+
+    if (input.segmentByDay) {
+      const byDate: Record<string, any[]> = {};
+      for (const row of results) {
+        const date = row.segments.date;
+        if (!byDate[date]) byDate[date] = [];
+        byDate[date].push(buildRow(row));
+      }
+
+      const daily = Object.entries(byDate)
+        .sort(([a], [b]) => b.localeCompare(a))
+        .map(([date, keywords]) => ({ date, keywords }));
+
+      return JSON.stringify({
+        dateRange: input.dateRange,
+        segmentByDay: true,
+        daily,
+      }, null, 2);
+    }
+
+    const keywords = results.map(buildRow);
 
     return JSON.stringify({
       dateRange: input.dateRange,
@@ -105,6 +136,7 @@ export const getKeywordPerformanceTool: Tool = {
       campaignId: { type: 'string' as const, description: 'Filter by campaign ID' },
       adGroupId: { type: 'string' as const, description: 'Filter by ad group ID' },
       limit: { type: 'number' as const, description: 'Max keywords to return', default: 50 },
+      segmentByDay: { type: 'boolean' as const, description: 'When true, returns metrics broken down by day instead of aggregated over the date range', default: false },
     },
   },
 };

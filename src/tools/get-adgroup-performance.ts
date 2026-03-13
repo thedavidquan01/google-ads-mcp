@@ -22,6 +22,10 @@ const GetAdGroupPerformanceSchema = z.object({
     .string()
     .optional()
     .describe('Filter by specific ad group ID'),
+  segmentByDay: z
+    .boolean()
+    .default(false)
+    .describe('When true, returns metrics broken down by day instead of aggregated over the date range'),
 });
 
 export async function getAdGroupPerformance(args: unknown): Promise<string> {
@@ -37,28 +41,34 @@ export async function getAdGroupPerformance(args: unknown): Promise<string> {
     if (input.campaignId) where.push(`campaign.id = ${input.campaignId}`);
     if (input.adGroupId) where.push(`ad_group.id = ${input.adGroupId}`);
 
+    const selectFields = [
+      'ad_group.id',
+      'ad_group.name',
+      'ad_group.status',
+      'ad_group.type',
+      'campaign.id',
+      'campaign.name',
+      'metrics.impressions',
+      'metrics.clicks',
+      'metrics.cost_micros',
+      'metrics.conversions',
+      'metrics.conversions_value',
+    ];
+
+    if (input.segmentByDay) {
+      selectFields.push('segments.date');
+    }
+
     const query = buildGaqlQuery({
-      select: [
-        'ad_group.id',
-        'ad_group.name',
-        'ad_group.status',
-        'ad_group.type',
-        'campaign.id',
-        'campaign.name',
-        'metrics.impressions',
-        'metrics.clicks',
-        'metrics.cost_micros',
-        'metrics.conversions',
-        'metrics.conversions_value',
-      ],
+      select: selectFields,
       from: 'ad_group',
       where,
-      orderBy: 'metrics.cost_micros DESC',
+      orderBy: input.segmentByDay ? 'segments.date DESC, metrics.cost_micros DESC' : 'metrics.cost_micros DESC',
     });
 
     const results = await executeGaql(query);
 
-    const adGroups = results.map((row: any) => {
+    function buildRow(row: any) {
       const ag = row.ad_group;
       const m = row.metrics;
       const impressions = safeParseNumber(m.impressions);
@@ -84,7 +94,28 @@ export async function getAdGroupPerformance(args: unknown): Promise<string> {
           videoViews: safeParseNumber(m.video_views),
         },
       };
-    });
+    }
+
+    if (input.segmentByDay) {
+      const byDate: Record<string, any[]> = {};
+      for (const row of results) {
+        const date = row.segments.date;
+        if (!byDate[date]) byDate[date] = [];
+        byDate[date].push(buildRow(row));
+      }
+
+      const daily = Object.entries(byDate)
+        .sort(([a], [b]) => b.localeCompare(a))
+        .map(([date, adGroups]) => ({ date, adGroups }));
+
+      return JSON.stringify({
+        dateRange: input.dateRange,
+        segmentByDay: true,
+        daily,
+      }, null, 2);
+    }
+
+    const adGroups = results.map(buildRow);
 
     return JSON.stringify({
       dateRange: input.dateRange,
@@ -108,6 +139,7 @@ export const getAdGroupPerformanceTool: Tool = {
       },
       campaignId: { type: 'string' as const, description: 'Filter by campaign ID' },
       adGroupId: { type: 'string' as const, description: 'Filter by specific ad group ID' },
+      segmentByDay: { type: 'boolean' as const, description: 'When true, returns metrics broken down by day instead of aggregated over the date range', default: false },
     },
   },
 };
