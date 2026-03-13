@@ -33,6 +33,10 @@ const GetCampaignPerformanceSchema = z.object({
     )
     .default(['impressions', 'clicks', 'spend', 'ctr', 'cpc', 'conversions'])
     .describe('Metrics to include in response'),
+  segmentByDay: z
+    .boolean()
+    .default(false)
+    .describe('When true, returns metrics broken down by day instead of aggregated over the date range'),
 });
 
 export async function getCampaignPerformance(args: unknown): Promise<string> {
@@ -64,6 +68,11 @@ export async function getCampaignPerformance(args: unknown): Promise<string> {
       'metrics.conversions_value',
     ];
 
+    // Include date segment for daily breakdown
+    if (input.segmentByDay) {
+      selectFields.push('segments.date');
+    }
+
     // video_views is only valid for VIDEO campaign type queries
     if (input.campaignType === 'VIDEO' || input.metrics.includes('video_views')) {
       selectFields.push('metrics.video_views');
@@ -73,7 +82,7 @@ export async function getCampaignPerformance(args: unknown): Promise<string> {
       select: selectFields,
       from: 'campaign',
       where,
-      orderBy: 'metrics.cost_micros DESC',
+      orderBy: input.segmentByDay ? 'segments.date DESC, metrics.cost_micros DESC' : 'metrics.cost_micros DESC',
     });
 
     const results = await executeGaql(query);
@@ -81,15 +90,13 @@ export async function getCampaignPerformance(args: unknown): Promise<string> {
     if (results.length === 0) {
       return JSON.stringify({
         dateRange: input.dateRange,
+        segmentByDay: input.segmentByDay,
         campaigns: [],
         message: `No campaigns found for date range ${input.dateRange}`,
       }, null, 2);
     }
 
-    const campaigns = results.map((row: any) => {
-      const campaign = row.campaign;
-      const m = row.metrics;
-
+    function buildMetrics(m: any): Record<string, number> {
       const impressions = safeParseNumber(m.impressions);
       const clicks = safeParseNumber(m.clicks);
       const costMicros = safeParseNumber(m.cost_micros);
@@ -112,14 +119,42 @@ export async function getCampaignPerformance(args: unknown): Promise<string> {
       }
       if (input.metrics.includes('video_views')) metrics.videoViews = videoViews;
 
-      return {
-        id: campaign.id,
-        name: campaign.name,
-        status: campaign.status,
-        type: campaign.advertising_channel_type,
-        metrics,
-      };
-    });
+      return metrics;
+    }
+
+    if (input.segmentByDay) {
+      // Group results by date, then list campaigns within each date
+      const byDate: Record<string, any[]> = {};
+      for (const row of results) {
+        const date = row.segments.date;
+        if (!byDate[date]) byDate[date] = [];
+        byDate[date].push({
+          id: row.campaign.id,
+          name: row.campaign.name,
+          status: row.campaign.status,
+          type: row.campaign.advertising_channel_type,
+          metrics: buildMetrics(row.metrics),
+        });
+      }
+
+      const daily = Object.entries(byDate)
+        .sort(([a], [b]) => b.localeCompare(a))
+        .map(([date, campaigns]) => ({ date, campaigns }));
+
+      return JSON.stringify({
+        dateRange: input.dateRange,
+        segmentByDay: true,
+        daily,
+      }, null, 2);
+    }
+
+    const campaigns = results.map((row: any) => ({
+      id: row.campaign.id,
+      name: row.campaign.name,
+      status: row.campaign.status,
+      type: row.campaign.advertising_channel_type,
+      metrics: buildMetrics(row.metrics),
+    }));
 
     return JSON.stringify({
       dateRange: input.dateRange,
@@ -162,6 +197,11 @@ export const getCampaignPerformanceTool: Tool = {
         },
         description: 'Metrics to include in response',
         default: ['impressions', 'clicks', 'spend', 'ctr', 'cpc', 'conversions'],
+      },
+      segmentByDay: {
+        type: 'boolean' as const,
+        description: 'When true, returns metrics broken down by day instead of aggregated over the date range',
+        default: false,
       },
     },
   },
