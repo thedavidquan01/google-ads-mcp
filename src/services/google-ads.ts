@@ -59,7 +59,26 @@ export async function executeGaql(query: string): Promise<any[]> {
     const results = await customer.query(query);
     return results;
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
+    let message: string;
+    if (error instanceof Error) {
+      message = error.message;
+    } else if (error && typeof error === 'object') {
+      // GoogleAdsFailure protobuf objects have an errors array
+      const anyError = error as any;
+      if (anyError.errors && Array.isArray(anyError.errors)) {
+        message = anyError.errors
+          .map((e: any) => e.message || e.error_code || JSON.stringify(e))
+          .join('; ');
+      } else {
+        try {
+          message = JSON.stringify(error);
+        } catch {
+          message = String(error);
+        }
+      }
+    } else {
+      message = String(error);
+    }
     throw new Error(`Google Ads API query failed: ${message}`);
   }
 }
