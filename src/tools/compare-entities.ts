@@ -41,7 +41,6 @@ export async function compareEntities(args: unknown): Promise<string> {
         'metrics.cost_micros',
         'metrics.conversions',
         'metrics.conversions_value',
-        'metrics.video_views',
       ],
       from: input.entity,
       where,

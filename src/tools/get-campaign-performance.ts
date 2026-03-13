@@ -52,19 +52,25 @@ export async function getCampaignPerformance(args: unknown): Promise<string> {
       where.push(`campaign.advertising_channel_type = '${input.campaignType}'`);
     }
 
+    const selectFields = [
+      'campaign.id',
+      'campaign.name',
+      'campaign.status',
+      'campaign.advertising_channel_type',
+      'metrics.impressions',
+      'metrics.clicks',
+      'metrics.cost_micros',
+      'metrics.conversions',
+      'metrics.conversions_value',
+    ];
+
+    // video_views is only valid for VIDEO campaign type queries
+    if (input.campaignType === 'VIDEO' || input.metrics.includes('video_views')) {
+      selectFields.push('metrics.video_views');
+    }
+
     const query = buildGaqlQuery({
-      select: [
-        'campaign.id',
-        'campaign.name',
-        'campaign.status',
-        'campaign.advertising_channel_type',
-        'metrics.impressions',
-        'metrics.clicks',
-        'metrics.cost_micros',
-        'metrics.conversions',
-        'metrics.conversions_value',
-        'metrics.video_views',
-      ],
+      select: selectFields,
       from: 'campaign',
       where,
       orderBy: 'metrics.cost_micros DESC',

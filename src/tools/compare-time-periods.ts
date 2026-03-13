@@ -51,7 +51,6 @@ async function queryPeriod(entity: string, dateCondition: string, entityId?: str
       'metrics.cost_micros',
       'metrics.conversions',
       'metrics.conversions_value',
-      'metrics.video_views',
     ],
     from: entity,
     where,
@@ -75,7 +74,6 @@ function formatMetrics(row: any) {
     cpc: calculateCpc(costMicros, clicks),
     conversions: safeParseNumber(m.conversions),
     conversionValue: safeParseNumber(m.conversions_value),
-    videoViews: safeParseNumber(m.video_views),
   };
 }
 
@@ -107,7 +105,7 @@ export async function compareTimePeriods(args: unknown): Promise<string> {
       const entity = row[input.entity];
       const current = formatMetrics(row);
       const previous = prevMap.get(String(entity.id)) || {
-        impressions: 0, clicks: 0, spend: 0, ctr: 0, cpc: 0, conversions: 0, conversionValue: 0, videoViews: 0,
+        impressions: 0, clicks: 0, spend: 0, ctr: 0, cpc: 0, conversions: 0, conversionValue: 0,
       };
 
       return {
@@ -120,7 +118,6 @@ export async function compareTimePeriods(args: unknown): Promise<string> {
         spend: calculateChange(current.spend, previous.spend),
         ctr: calculateChange(current.ctr, previous.ctr),
         conversions: calculateChange(current.conversions, previous.conversions),
-        videoViews: calculateChange(current.videoViews, previous.videoViews),
       };
     });
 
