@@ -7,7 +7,7 @@
 **Step 1:** Copy this command and paste it into your terminal:
 
 ```bash
-claude mcp add google-ads --transport http https://recime-google-ads-mcp.fly.dev/mcp
+claude mcp add google-ads --transport http https://sp-google-ads-mcp.fly.dev/mcp
 ```
 
 **Step 2:** When Claude Code starts, just ask:
@@ -27,7 +27,7 @@ If `claude mcp add` doesn't work, manually edit `~/.config/claude-code/mcp.json`
 {
   "mcpServers": {
     "google-ads": {
-      "url": "https://recime-google-ads-mcp.fly.dev/mcp",
+      "url": "https://sp-google-ads-mcp.fly.dev/mcp",
       "transport": "http"
     }
   }
@@ -73,7 +73,7 @@ Your session lasts 24 hours. When it expires:
 
 Contact the team admin or check the server status:
 ```bash
-curl https://recime-google-ads-mcp.fly.dev/health
+curl https://sp-google-ads-mcp.fly.dev/health
 ```
 
 ---

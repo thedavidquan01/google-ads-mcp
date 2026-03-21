@@ -2,7 +2,7 @@
 
 A Model Context Protocol (MCP) server that provides access to Google Ads API for comprehensive ad analytics with YouTube video analysis. Use the hosted instance with Claude Code in 30 seconds, or run your own.
 
-**Live Instance:** `https://recime-google-ads-mcp.fly.dev/mcp`
+**Live Instance:** `https://sp-google-ads-mcp.fly.dev/mcp`
 
 ## Features
 
@@ -56,7 +56,7 @@ A Model Context Protocol (MCP) server that provides access to Google Ads API for
 ### Method 1: One Command (Recommended)
 
 ```bash
-claude mcp add google-ads --transport http https://recime-google-ads-mcp.fly.dev/mcp
+claude mcp add google-ads --transport http https://sp-google-ads-mcp.fly.dev/mcp
 ```
 
 That's it! Now try asking in Claude Code:
@@ -76,7 +76,7 @@ If `claude mcp add` doesn't work, edit `~/.config/claude-code/mcp.json`:
 {
   "mcpServers": {
     "google-ads": {
-      "url": "https://recime-google-ads-mcp.fly.dev/mcp",
+      "url": "https://sp-google-ads-mcp.fly.dev/mcp",
       "transport": "http"
     }
   }
@@ -103,7 +103,7 @@ Share this link with your team: [ONBOARDING.md](./ONBOARDING.md)
 
 Or send them this simple instruction:
 ```
-Run: claude mcp add google-ads --transport http https://recime-google-ads-mcp.fly.dev/mcp
+Run: claude mcp add google-ads --transport http https://sp-google-ads-mcp.fly.dev/mcp
 ```
 
 ---
@@ -114,7 +114,7 @@ If you want to run your own instance (for development or customization):
 
 ```bash
 # 1. Clone and setup
-git clone https://github.com/team-recime/google-ads-mcp.git
+git clone https://github.com/superpower-growth/google-ads-mcp.git
 cd google-ads-mcp
 npm install
 
@@ -183,7 +183,7 @@ See `.env.example` for full documentation. Key variables:
 ### Google OAuth 2.0
 - `GOOGLE_CLIENT_ID` - OAuth client ID from Google Cloud Console
 - `GOOGLE_CLIENT_SECRET` - OAuth client secret
-- `GOOGLE_CALLBACK_URL` - OAuth redirect URI (default: `https://recime-google-ads-mcp.fly.dev/auth/callback`)
+- `GOOGLE_CALLBACK_URL` - OAuth redirect URI (default: `https://sp-google-ads-mcp.fly.dev/auth/callback`)
 
 ### Server
 - `HOST` - Server bind address (default: `0.0.0.0`)
@@ -251,7 +251,7 @@ docker run -d \
 
 - `GET /health` - Health check (no auth required)
   ```bash
-  curl https://recime-google-ads-mcp.fly.dev/health
+  curl https://sp-google-ads-mcp.fly.dev/health
   ```
 
 ### Authentication Endpoints
