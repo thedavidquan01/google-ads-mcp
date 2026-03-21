@@ -1,11 +1,11 @@
 # Google Ads MCP Server
 
-A Model Context Protocol (MCP) server that provides access to Google Ads API and YouTube video analytics with AI-powered creative analysis.
+A Model Context Protocol (MCP) server that provides access to Google Ads API and YouTube video analytics with AI-powered creative analysis. Built and maintained by the Superpower growth team.
 
 ## Quick Start (Claude Code)
 
 ```bash
-claude mcp add --transport http google-ads https://recime-google-ads-mcp.fly.dev/mcp
+claude mcp add --transport http google-ads https://sp-google-ads-mcp.fly.dev/mcp
 ```
 
 Then ask:
@@ -23,7 +23,7 @@ Edit `~/.config/claude-code/mcp.json`:
 {
   "mcpServers": {
     "google-ads": {
-      "url": "https://recime-google-ads-mcp.fly.dev/mcp",
+      "url": "https://sp-google-ads-mcp.fly.dev/mcp",
       "transport": "http"
     }
   }
@@ -93,7 +93,7 @@ Optional (for video analysis):
 ### Setup
 
 ```bash
-git clone https://github.com/team-recime/google-ads-mcp.git
+git clone https://github.com/superpower-growth/google-ads-mcp.git
 cd google-ads-mcp
 cp .env.example .env
 # Edit .env with your credentials
@@ -141,6 +141,8 @@ docker run -d -p 3000:3000 --env-file .env google-ads-mcp
 fly deploy
 ```
 
+Deployed at: `https://sp-google-ads-mcp.fly.dev`
+
 ## API Endpoints
 
 | Endpoint | Description |
@@ -165,4 +167,4 @@ MIT
 
 ---
 
-Built with the [Model Context Protocol SDK](https://github.com/modelcontextprotocol/sdk)
+Built by [Superpower](https://www.superpower.com) with the [Model Context Protocol SDK](https://github.com/modelcontextprotocol/sdk)

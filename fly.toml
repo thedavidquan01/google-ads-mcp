@@ -1,4 +1,4 @@
-app = 'recime-google-ads-mcp'
+app = 'sp-google-ads-mcp'
 primary_region = 'sjc'
 
 [build]
