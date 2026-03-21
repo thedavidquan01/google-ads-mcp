@@ -224,14 +224,14 @@ async function main() {
   app.use(session(getSessionConfig()));
 
   // MCP Server metadata endpoint
-  app.get('/mcp-metadata', (_req, res) => {
+  app.get('/mcp-metadata', (req, res) => {
     res.json({
       name: 'google-ads',
       displayName: 'Google Ads Analytics',
       description: 'Access Google Ads API for campaign analytics, YouTube video metrics, and AI-powered video analysis',
       version: '0.1.0',
       transport: 'http',
-      url: `${env.NODE_ENV === 'production' ? 'https://sp-google-ads-mcp.fly.dev' : 'http://localhost:3000'}/mcp`,
+      url: `${env.NODE_ENV === 'production' ? `https://${req.get('host')}` : 'http://localhost:3000'}/mcp`,
       authentication: {
         type: 'oauth',
         provider: 'google',
