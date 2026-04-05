@@ -46,6 +46,23 @@ import { getKeywordPerformance } from './tools/get-keyword-performance.js';
 import { listCampaigns } from './tools/list-campaigns.js';
 import { listAdGroups } from './tools/list-ad-groups.js';
 import { getAdCreativeText } from './tools/get-ad-creative-text.js';
+import { getSearchTerms } from './tools/get-search-terms.js';
+import { getKeywordIdeas } from './tools/get-keyword-ideas.js';
+import { getConversionActions } from './tools/get-conversion-actions.js';
+import { getGenderPerformance } from './tools/get-gender-performance.js';
+import { getAgePerformance } from './tools/get-age-performance.js';
+import { getGeoPerformance } from './tools/get-geo-performance.js';
+import { getAudiencePerformance } from './tools/get-audience-performance.js';
+import { getAssetPerformance } from './tools/get-asset-performance.js';
+import { getPlacementPerformance } from './tools/get-placement-performance.js';
+import { getDevicePerformance } from './tools/get-device-performance.js';
+import { getAdSchedulePerformance } from './tools/get-ad-schedule-performance.js';
+import { getChangeHistory } from './tools/get-change-history.js';
+import { getRecommendations } from './tools/get-recommendations.js';
+import { getLandingPagePerformance } from './tools/get-landing-page-performance.js';
+import { getBudgetInfo } from './tools/get-budget-info.js';
+import { getShoppingPerformance } from './tools/get-shopping-performance.js';
+import { getAdExtensionPerformance } from './tools/get-ad-extension-performance.js';
 
 /**
  * Create a fresh MCP server instance with all tool handlers registered.
@@ -124,6 +141,74 @@ function createMCPServer(): Server {
         }
         case 'get-ad-creative-text': {
           const result = await getAdCreativeText(args as any);
+          return { content: [{ type: 'text', text: result }] };
+        }
+        case 'get-search-terms': {
+          const result = await getSearchTerms(args as any);
+          return { content: [{ type: 'text', text: result }] };
+        }
+        case 'get-keyword-ideas': {
+          const result = await getKeywordIdeas(args as any);
+          return { content: [{ type: 'text', text: result }] };
+        }
+        case 'get-gender-performance': {
+          const result = await getGenderPerformance(args as any);
+          return { content: [{ type: 'text', text: result }] };
+        }
+        case 'get-age-performance': {
+          const result = await getAgePerformance(args as any);
+          return { content: [{ type: 'text', text: result }] };
+        }
+        case 'get-geo-performance': {
+          const result = await getGeoPerformance(args as any);
+          return { content: [{ type: 'text', text: result }] };
+        }
+        case 'get-conversion-actions': {
+          const result = await getConversionActions(args as any);
+          return { content: [{ type: 'text', text: result }] };
+        }
+        case 'get-audience-performance': {
+          const result = await getAudiencePerformance(args as any);
+          return { content: [{ type: 'text', text: result }] };
+        }
+        case 'get-asset-performance': {
+          const result = await getAssetPerformance(args as any);
+          return { content: [{ type: 'text', text: result }] };
+        }
+        case 'get-placement-performance': {
+          const result = await getPlacementPerformance(args as any);
+          return { content: [{ type: 'text', text: result }] };
+        }
+        case 'get-device-performance': {
+          const result = await getDevicePerformance(args as any);
+          return { content: [{ type: 'text', text: result }] };
+        }
+        case 'get-ad-schedule-performance': {
+          const result = await getAdSchedulePerformance(args as any);
+          return { content: [{ type: 'text', text: result }] };
+        }
+        case 'get-change-history': {
+          const result = await getChangeHistory(args as any);
+          return { content: [{ type: 'text', text: result }] };
+        }
+        case 'get-recommendations': {
+          const result = await getRecommendations(args as any);
+          return { content: [{ type: 'text', text: result }] };
+        }
+        case 'get-landing-page-performance': {
+          const result = await getLandingPagePerformance(args as any);
+          return { content: [{ type: 'text', text: result }] };
+        }
+        case 'get-budget-info': {
+          const result = await getBudgetInfo(args as any);
+          return { content: [{ type: 'text', text: result }] };
+        }
+        case 'get-shopping-performance': {
+          const result = await getShoppingPerformance(args as any);
+          return { content: [{ type: 'text', text: result }] };
+        }
+        case 'get-ad-extension-performance': {
+          const result = await getAdExtensionPerformance(args as any);
           return { content: [{ type: 'text', text: result }] };
         }
         default:

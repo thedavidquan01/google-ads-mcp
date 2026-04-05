@@ -23,9 +23,26 @@ import { getKeywordPerformanceTool } from './get-keyword-performance.js';
 import { listCampaignsTool } from './list-campaigns.js';
 import { listAdGroupsTool } from './list-ad-groups.js';
 import { getAdCreativeTextTool } from './get-ad-creative-text.js';
+import { getSearchTermsTool } from './get-search-terms.js';
+import { getKeywordIdeasTool } from './get-keyword-ideas.js';
+import { getConversionActionsTool } from './get-conversion-actions.js';
+import { getGenderPerformanceTool } from './get-gender-performance.js';
+import { getAgePerformanceTool } from './get-age-performance.js';
+import { getGeoPerformanceTool } from './get-geo-performance.js';
+import { getAudiencePerformanceTool } from './get-audience-performance.js';
+import { getAssetPerformanceTool } from './get-asset-performance.js';
+import { getPlacementPerformanceTool } from './get-placement-performance.js';
+import { getDevicePerformanceTool } from './get-device-performance.js';
+import { getAdSchedulePerformanceTool } from './get-ad-schedule-performance.js';
+import { getChangeHistoryTool } from './get-change-history.js';
+import { getRecommendationsTool } from './get-recommendations.js';
+import { getLandingPagePerformanceTool } from './get-landing-page-performance.js';
+import { getBudgetInfoTool } from './get-budget-info.js';
+import { getShoppingPerformanceTool } from './get-shopping-performance.js';
+import { getAdExtensionPerformanceTool } from './get-ad-extension-performance.js';
 
 /**
- * All available tools (15 total)
+ * All available tools (32 total)
  */
 export const tools: Tool[] = [
   // Core Analytics
@@ -45,10 +62,39 @@ export const tools: Tool[] = [
   analyzeVideoCreativeTool,
   analyzeVideoUrlTool,
 
-  // Search Keywords
+  // Search Keywords & Terms
   getKeywordPerformanceTool,
+  getSearchTermsTool,
+  getKeywordIdeasTool,
 
-  // Campaign Management
+  // Audience & Demographics
+  getGenderPerformanceTool,
+  getAgePerformanceTool,
+  getGeoPerformanceTool,
+  getAudiencePerformanceTool,
+  getDevicePerformanceTool,
+
+  // Creative & Assets
+  getAssetPerformanceTool,
+  getAdExtensionPerformanceTool,
+  getPlacementPerformanceTool,
+
+  // Conversion Tracking
+  getConversionActionsTool,
+
+  // Scheduling & Budget
+  getAdSchedulePerformanceTool,
+  getBudgetInfoTool,
+
+  // Landing Pages
+  getLandingPagePerformanceTool,
+
+  // Shopping
+  getShoppingPerformanceTool,
+
+  // Account Management
+  getChangeHistoryTool,
+  getRecommendationsTool,
   listCampaignsTool,
   listAdGroupsTool,
   getAdCreativeTextTool,

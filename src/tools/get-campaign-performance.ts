@@ -37,6 +37,14 @@ const GetCampaignPerformanceSchema = z.object({
     .boolean()
     .default(false)
     .describe('When true, returns metrics broken down by day instead of aggregated over the date range'),
+  segmentByConversionAction: z
+    .boolean()
+    .default(false)
+    .describe('When true, returns metrics broken down by conversion action'),
+  includeConversionGoals: z
+    .boolean()
+    .default(false)
+    .describe('When true, includes the conversion actions each campaign is configured to optimize toward'),
 });
 
 export async function getCampaignPerformance(args: unknown): Promise<string> {
@@ -61,31 +69,83 @@ export async function getCampaignPerformance(args: unknown): Promise<string> {
       'campaign.name',
       'campaign.status',
       'campaign.advertising_channel_type',
-      'metrics.impressions',
-      'metrics.clicks',
       'metrics.cost_micros',
       'metrics.conversions',
       'metrics.conversions_value',
     ];
+
+    // impressions/clicks/video_views are not compatible with segments.conversion_action
+    if (!input.segmentByConversionAction) {
+      selectFields.push('metrics.impressions', 'metrics.clicks');
+      // video_views is only valid for VIDEO campaign type queries
+      if (input.campaignType === 'VIDEO' || input.metrics.includes('video_views')) {
+        selectFields.push('metrics.video_views');
+      }
+    } else {
+      selectFields.push('metrics.all_conversions', 'metrics.all_conversions_value');
+    }
 
     // Include date segment for daily breakdown
     if (input.segmentByDay) {
       selectFields.push('segments.date');
     }
 
-    // video_views is only valid for VIDEO campaign type queries
-    if (input.campaignType === 'VIDEO' || input.metrics.includes('video_views')) {
-      selectFields.push('metrics.video_views');
+    // Include conversion action segment
+    if (input.segmentByConversionAction) {
+      selectFields.push('segments.conversion_action_name');
+      selectFields.push('segments.conversion_action');
+    }
+
+    let orderBy = 'metrics.cost_micros DESC';
+    if (input.segmentByDay) {
+      orderBy = 'segments.date DESC, metrics.cost_micros DESC';
     }
 
     const query = buildGaqlQuery({
       select: selectFields,
       from: 'campaign',
       where,
-      orderBy: input.segmentByDay ? 'segments.date DESC, metrics.cost_micros DESC' : 'metrics.cost_micros DESC',
+      orderBy,
     });
 
     const results = await executeGaql(query);
+
+    // Fetch campaign conversion goals if requested
+    let conversionGoalsByCampaign: Record<string, any[]> = {};
+    if (input.includeConversionGoals) {
+      const goalWhere: string[] = [campaignStatusFilter()];
+      if (input.campaignId) goalWhere.push(`campaign.id = ${input.campaignId}`);
+      if (input.campaignType) goalWhere.push(`campaign.advertising_channel_type = '${input.campaignType}'`);
+
+      const goalQuery = buildGaqlQuery({
+        select: [
+          'campaign.id',
+          'campaign_conversion_goal.category',
+          'campaign_conversion_goal.origin',
+          'campaign_conversion_goal.biddable',
+        ],
+        from: 'campaign_conversion_goal',
+        where: goalWhere,
+      });
+
+      try {
+        const goalResults = await executeGaql(goalQuery);
+        for (const row of goalResults) {
+          const campaignId = String(row.campaign?.id);
+          if (!conversionGoalsByCampaign[campaignId]) {
+            conversionGoalsByCampaign[campaignId] = [];
+          }
+          const goal = row.campaign_conversion_goal || {};
+          conversionGoalsByCampaign[campaignId].push({
+            category: goal.category,
+            origin: goal.origin,
+            biddable: goal.biddable,
+          });
+        }
+      } catch {
+        // If conversion goals query fails, continue without them
+      }
+    }
 
     if (results.length === 0) {
       return JSON.stringify({
@@ -97,29 +157,55 @@ export async function getCampaignPerformance(args: unknown): Promise<string> {
     }
 
     function buildMetrics(m: any): Record<string, number> {
-      const impressions = safeParseNumber(m.impressions);
-      const clicks = safeParseNumber(m.clicks);
-      const costMicros = safeParseNumber(m.cost_micros);
-      const conversions = safeParseNumber(m.conversions);
-      const conversionValue = safeParseNumber(m.conversions_value);
-      const videoViews = safeParseNumber(m.video_views);
-
       const metrics: Record<string, number> = {};
 
-      if (input.metrics.includes('impressions')) metrics.impressions = impressions;
-      if (input.metrics.includes('clicks')) metrics.clicks = clicks;
-      if (input.metrics.includes('spend')) metrics.spend = microsToAmount(costMicros);
-      if (input.metrics.includes('ctr')) metrics.ctr = calculateCtr(impressions, clicks);
-      if (input.metrics.includes('cpc')) metrics.cpc = calculateCpc(costMicros, clicks);
-      if (input.metrics.includes('cpm')) metrics.cpm = calculateCpm(costMicros, impressions);
-      if (input.metrics.includes('conversions')) metrics.conversions = conversions;
-      if (input.metrics.includes('conversion_value')) metrics.conversionValue = conversionValue;
-      if (input.metrics.includes('roas') && costMicros > 0) {
-        metrics.roas = conversionValue / microsToAmount(costMicros);
+      if (input.segmentByConversionAction) {
+        metrics.spend = microsToAmount(safeParseNumber(m.cost_micros));
+        metrics.conversions = safeParseNumber(m.conversions);
+        metrics.conversionValue = safeParseNumber(m.conversions_value);
+        metrics.allConversions = safeParseNumber(m.all_conversions);
+        metrics.allConversionsValue = safeParseNumber(m.all_conversions_value);
+      } else {
+        const impressions = safeParseNumber(m.impressions);
+        const clicks = safeParseNumber(m.clicks);
+        const costMicros = safeParseNumber(m.cost_micros);
+        const conversions = safeParseNumber(m.conversions);
+        const conversionValue = safeParseNumber(m.conversions_value);
+        const videoViews = safeParseNumber(m.video_views);
+
+        if (input.metrics.includes('impressions')) metrics.impressions = impressions;
+        if (input.metrics.includes('clicks')) metrics.clicks = clicks;
+        if (input.metrics.includes('spend')) metrics.spend = microsToAmount(costMicros);
+        if (input.metrics.includes('ctr')) metrics.ctr = calculateCtr(impressions, clicks);
+        if (input.metrics.includes('cpc')) metrics.cpc = calculateCpc(costMicros, clicks);
+        if (input.metrics.includes('cpm')) metrics.cpm = calculateCpm(costMicros, impressions);
+        if (input.metrics.includes('conversions')) metrics.conversions = conversions;
+        if (input.metrics.includes('conversion_value')) metrics.conversionValue = conversionValue;
+        if (input.metrics.includes('roas') && costMicros > 0) {
+          metrics.roas = conversionValue / microsToAmount(costMicros);
+        }
+        if (input.metrics.includes('video_views')) metrics.videoViews = videoViews;
       }
-      if (input.metrics.includes('video_views')) metrics.videoViews = videoViews;
 
       return metrics;
+    }
+
+    function buildCampaignRow(row: any) {
+      const campaignId = String(row.campaign.id);
+      const entry: any = {
+        id: row.campaign.id,
+        name: row.campaign.name,
+        status: row.campaign.status,
+        type: row.campaign.advertising_channel_type,
+        metrics: buildMetrics(row.metrics),
+      };
+      if (input.segmentByConversionAction) {
+        entry.conversionAction = row.segments?.conversion_action_name || 'Unknown';
+      }
+      if (input.includeConversionGoals && conversionGoalsByCampaign[campaignId]) {
+        entry.conversionGoals = conversionGoalsByCampaign[campaignId];
+      }
+      return entry;
     }
 
     if (input.segmentByDay) {
@@ -128,13 +214,7 @@ export async function getCampaignPerformance(args: unknown): Promise<string> {
       for (const row of results) {
         const date = row.segments.date;
         if (!byDate[date]) byDate[date] = [];
-        byDate[date].push({
-          id: row.campaign.id,
-          name: row.campaign.name,
-          status: row.campaign.status,
-          type: row.campaign.advertising_channel_type,
-          metrics: buildMetrics(row.metrics),
-        });
+        byDate[date].push(buildCampaignRow(row));
       }
 
       const daily = Object.entries(byDate)
@@ -144,17 +224,12 @@ export async function getCampaignPerformance(args: unknown): Promise<string> {
       return JSON.stringify({
         dateRange: input.dateRange,
         segmentByDay: true,
+        segmentByConversionAction: input.segmentByConversionAction,
         daily,
       }, null, 2);
     }
 
-    const campaigns = results.map((row: any) => ({
-      id: row.campaign.id,
-      name: row.campaign.name,
-      status: row.campaign.status,
-      type: row.campaign.advertising_channel_type,
-      metrics: buildMetrics(row.metrics),
-    }));
+    const campaigns = results.map(buildCampaignRow);
 
     return JSON.stringify({
       dateRange: input.dateRange,
@@ -201,6 +276,16 @@ export const getCampaignPerformanceTool: Tool = {
       segmentByDay: {
         type: 'boolean' as const,
         description: 'When true, returns metrics broken down by day instead of aggregated over the date range',
+        default: false,
+      },
+      segmentByConversionAction: {
+        type: 'boolean' as const,
+        description: 'When true, returns metrics broken down by conversion action',
+        default: false,
+      },
+      includeConversionGoals: {
+        type: 'boolean' as const,
+        description: 'When true, includes the conversion actions each campaign is configured to optimize toward',
         default: false,
       },
     },

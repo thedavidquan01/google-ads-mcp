@@ -26,6 +26,10 @@ const GetAdGroupPerformanceSchema = z.object({
     .boolean()
     .default(false)
     .describe('When true, returns metrics broken down by day instead of aggregated over the date range'),
+  segmentByConversionAction: z
+    .boolean()
+    .default(false)
+    .describe('When true, returns metrics broken down by conversion action'),
 });
 
 export async function getAdGroupPerformance(args: unknown): Promise<string> {
@@ -48,22 +52,37 @@ export async function getAdGroupPerformance(args: unknown): Promise<string> {
       'ad_group.type',
       'campaign.id',
       'campaign.name',
-      'metrics.impressions',
-      'metrics.clicks',
       'metrics.cost_micros',
       'metrics.conversions',
       'metrics.conversions_value',
     ];
 
+    // impressions/clicks are not compatible with segments.conversion_action
+    if (!input.segmentByConversionAction) {
+      selectFields.push('metrics.impressions', 'metrics.clicks');
+    } else {
+      selectFields.push('metrics.all_conversions', 'metrics.all_conversions_value');
+    }
+
     if (input.segmentByDay) {
       selectFields.push('segments.date');
+    }
+
+    if (input.segmentByConversionAction) {
+      selectFields.push('segments.conversion_action_name');
+      selectFields.push('segments.conversion_action');
+    }
+
+    let orderBy = 'metrics.cost_micros DESC';
+    if (input.segmentByDay) {
+      orderBy = 'segments.date DESC, metrics.cost_micros DESC';
     }
 
     const query = buildGaqlQuery({
       select: selectFields,
       from: 'ad_group',
       where,
-      orderBy: input.segmentByDay ? 'segments.date DESC, metrics.cost_micros DESC' : 'metrics.cost_micros DESC',
+      orderBy,
     });
 
     const results = await executeGaql(query);
@@ -71,18 +90,30 @@ export async function getAdGroupPerformance(args: unknown): Promise<string> {
     function buildRow(row: any) {
       const ag = row.ad_group;
       const m = row.metrics;
-      const impressions = safeParseNumber(m.impressions);
-      const clicks = safeParseNumber(m.clicks);
-      const costMicros = safeParseNumber(m.cost_micros);
 
-      return {
+      const entry: any = {
         id: ag.id,
         name: ag.name,
         status: ag.status,
         type: ag.type,
         campaignId: row.campaign.id,
         campaignName: row.campaign.name,
-        metrics: {
+      };
+
+      if (input.segmentByConversionAction) {
+        entry.conversionAction = row.segments?.conversion_action_name || 'Unknown';
+        entry.metrics = {
+          spend: microsToAmount(safeParseNumber(m.cost_micros)),
+          conversions: safeParseNumber(m.conversions),
+          conversionValue: safeParseNumber(m.conversions_value),
+          allConversions: safeParseNumber(m.all_conversions),
+          allConversionsValue: safeParseNumber(m.all_conversions_value),
+        };
+      } else {
+        const impressions = safeParseNumber(m.impressions);
+        const clicks = safeParseNumber(m.clicks);
+        const costMicros = safeParseNumber(m.cost_micros);
+        entry.metrics = {
           impressions,
           clicks,
           spend: microsToAmount(costMicros),
@@ -92,8 +123,10 @@ export async function getAdGroupPerformance(args: unknown): Promise<string> {
           conversions: safeParseNumber(m.conversions),
           conversionValue: safeParseNumber(m.conversions_value),
           videoViews: safeParseNumber(m.video_views),
-        },
-      };
+        };
+      }
+
+      return entry;
     }
 
     if (input.segmentByDay) {
@@ -140,6 +173,7 @@ export const getAdGroupPerformanceTool: Tool = {
       campaignId: { type: 'string' as const, description: 'Filter by campaign ID' },
       adGroupId: { type: 'string' as const, description: 'Filter by specific ad group ID' },
       segmentByDay: { type: 'boolean' as const, description: 'When true, returns metrics broken down by day instead of aggregated over the date range', default: false },
+      segmentByConversionAction: { type: 'boolean' as const, description: 'When true, returns metrics broken down by conversion action', default: false },
     },
   },
 };

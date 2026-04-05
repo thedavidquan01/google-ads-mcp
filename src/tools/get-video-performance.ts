@@ -68,6 +68,7 @@ export async function getVideoPerformance(args: unknown): Promise<string> {
 
       return {
         videoId: video.id,
+        videoUrl: `https://www.youtube.com/watch?v=${video.id}`,
         title: video.title,
         channelId: video.channel_id,
         durationMs: safeParseNumber(video.duration_millis),

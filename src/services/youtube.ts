@@ -11,6 +11,7 @@ const YOUTUBE_API_BASE = 'https://www.googleapis.com/youtube/v3';
 
 export interface YouTubeVideoDetails {
   id: string;
+  url: string;
   title: string;
   description: string;
   duration: string;       // ISO 8601 (PT1M30S)
@@ -62,6 +63,7 @@ export async function getVideoDetails(videoId: string, apiKey: string): Promise<
 
     return {
       id: video.id,
+      url: `https://www.youtube.com/watch?v=${video.id}`,
       title: snippet.title,
       description: snippet.description,
       duration: contentDetails.duration,
